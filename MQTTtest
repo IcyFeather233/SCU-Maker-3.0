@@ -54,15 +54,37 @@ void callback(char* topic, byte* payload, unsigned int length) {
   if(str_t == "ledColor")
   {
       String str_color = str_r.substring(1,7);
-      Serial.println(str_color);
+//      Serial.println(str_color);
       String str_color_convert = str_color.substring(2,4) + str_color.substring(0,2) + str_color.substring(4,6);
-      Serial.println(str_color_convert);
+//      Serial.println(str_color_convert);
       char *offset;
       uint32_t colorhex = strtol(str_color_convert.c_str(), &offset, 16);
-      Serial.println(colorhex);
+//      Serial.println(colorhex);
       ws2812fx.setColor(colorhex);
   }
- 
+//----------------------------------------------------------------------
+//-------------------------亮度部分-------------------------------------
+  if(str_t == "ledBrightness")
+  {
+      Serial.println(str_r);
+      String str_b;
+      if(!isdigit(str_r[1]))
+      {
+        str_b = str_r.substring(0,3);
+      }
+      else if(!isdigit(str_r[2]))
+      {
+        str_b = str_r.substring(0,2);
+      }
+      else
+      {
+        str_b = str_r.substring(0,3);
+      }
+      char *offset;
+      uint32_t b = strtol(str_b.c_str(), &offset, 10) * (255.0/100.0);
+      Serial.println(b);
+      ws2812fx.setBrightness(b);
+  }
   Serial.println();
 }
  
@@ -76,6 +98,7 @@ void reconnect() {
       Serial.println("connected");
       client.subscribe("ledStatus");  // 订阅 'ledStatus' 这个topic
       client.subscribe("ledColor"); 
+      client.subscribe("ledBrightness"); 
     }
     else
     {
