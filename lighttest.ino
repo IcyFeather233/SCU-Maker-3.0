@@ -25,9 +25,6 @@ int nowRight = 100;
 int idx = 0;
 
 void callback(char* topic, byte* payload, unsigned int length) {
-  nowLeft = 0;
-  nowRight = 100;
-  
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
@@ -35,7 +32,11 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
   char* receivedChar = (char*)payload;
   String str_r = receivedChar;
+  Serial.println("the str_r before is :" + str_r);
+  str_r = str_r.substring(0,length);
+  Serial.println("the str_r after is :" + str_r);
   String str_t = topic;
+  Serial.println("the str_t is :" + str_t);
   
 //----------------------------------------------------------------------
 //-------------------------分段部分-------------------------------------
@@ -101,22 +102,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
 //-------------------------亮度部分-------------------------------------
   if(str_t == "ledBrt")
   {
-      Serial.println(str_r);
-      String str_b;
-      if(!isdigit(str_r[1]))
-      {
-        str_b = str_r.substring(0,3);
-      }
-      else if(!isdigit(str_r[2]))
-      {
-        str_b = str_r.substring(0,2);
-      }
-      else
-      {
-        str_b = str_r.substring(0,3);
-      }
       char *offset;
-      uint32_t b = strtol(str_b.c_str(), &offset, 10) * (255.0/100.0);
+      uint32_t b = strtol(str_r.c_str(), &offset, 10) * (255.0/100.0);
       Serial.println(b);
       ws2812fx.setBrightness(b);
   }
