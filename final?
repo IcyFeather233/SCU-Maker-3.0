@@ -1,0 +1,169 @@
+#include <WS2812FX.h>
+#include <EEPROM.h>
+#include <ESP8266WiFi.h>
+#include <PubSubClient.h>
+#include <Wire.h>
+#include <Adafruit_INA219.h>
+#include <string.h>
+#include "string.h"
+
+// Update these with values suitable for your network.
+
+const char* ssid = "SCU_Makers";  // wifi名称
+const char* password = "iloveSCU"; // wifi密码
+const char* mqtt_server = "scumaker.org"; 
+const int mqttPort = 1883;
+const char* lightTopic = "lightTopic";// light or dark
+const char* waterfallTopic = "waterfallTopic";//run or stop
+const char* segmentTopic = "segmentTopic"//control each character
+const char* setColorTopic = "setColorTopic"//set color
+
+unsigned long last_change = 0;
+unsigned long now = 0;
+uint32_t nowColor = 0;
+int lightPin = 2;
+int segment[7] = {50, 90, 130, 170, 220, 260, 300}//dividing ws2812 into 8 segements needs 7 cuts
+#define LED_COUNT 110
+#define TIMER_MS 5000
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+WS2812FX ws2812fx = WS2812FX(LED_COUNT, ledPin, NEO_RGB + NEO_KHZ800);
+
+
+
+void setup_wifi() {
+
+  delay(10);
+  // We start by connecting to a WiFi network
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }  
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+}
+
+void callback(char* topic, byte* payload, unsigned int length) {
+  Serial.println(topic);
+  String command = "";
+  for (int i = 0; i < length; i++) {
+    command += (char)payload[i];
+  }
+  Serial.println(command);
+  handlePayload(String(topic), command); 
+}
+
+void reconnect() {
+  // Loop until we're reconnected
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    //详细参数说明请查看文档
+    if (client.connect(ESP8266 Client)) {
+      Serial.println("connected");
+      client.publish(onlineTopic, clientId);
+      client.subscribe(lightTopic, 1);
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
+  }
+}
+
+void setup() {
+  pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
+  Serial.begin(9600);
+  setup_wifi();
+  client.setServer(mqttServer, mqttPort);
+  client.setCallback(callback);
+  //---------------------初始化--------------------------------------------------------------
+  ws2812fx.init();
+  ws2812fx.setBrightness(0);
+  ws2812fx.setColor(0x007BFF);
+  ws2812fx.setMode(FX_MODE_STATIC);
+  ws2812fx.start();
+}
+
+void loop() {
+  now = millis();
+  ws2812fx.service();
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
+}
+
+//处理命令
+String handlePayload(String topic, String payload) {
+  if (String(lightTopic).equals(topic)) {
+    //light command
+    if (String("1").equals(payload)) {
+      digitalWrite(lightPin, HIGH);
+    } else if (String("0").equals(payload)) {
+      digitalWrite(lightPin, LOW);
+    } 
+  }
+//---------------------------------------------------------------  
+  if (String(waterfallTopic).equals(topic)) {
+    if (String("1").equals(payload)) {
+      //模式循环
+      if(now - last_change > TIMER_MS) {
+      ws2812fx.setMode((ws2812fx.getMode() + 1) % ws2812fx.getModeCount());
+      last_change = now;
+  }
+    } else if (String("0").equals(payload)) {
+      //模式暂停保持
+      ws2812fx.setMode(ws2812fx.getMode());
+    }
+  }
+//---------------------------------------------------------------  
+  if (String(segmentTopic).equals(topic)) {
+    if (String("s").equals(payload)) {
+      ws2812fx.setSegment(0, 0, segment[0], FX_MODE_STATIC, nowColor, 1000, false);
+    }
+    if (String("c").equals(payload)) {
+      ws2812fx.setSegment(1, segment[0] + 1, segment[1], FX_MODE_STATIC, nowColor, 1000, false);
+    }
+    if (String("u").equals(payload)) {
+      ws2812fx.setSegment(2, segment[1] + 1, segment[2], FX_MODE_STATIC, nowColor, 1000, false);
+    }
+    if (String("m").equals(payload)) {
+      ws2812fx.setSegment(3, segment[2] + 1, segment[3], FX_MODE_STATIC, nowColor, 1000, false);
+    }
+    if (String("a").equals(payload)) {
+      ws2812fx.setSegment(4, segment[3] + 1, segment[4], FX_MODE_STATIC, nowColor, 1000, false);
+    }
+    if (String("k").equals(payload)) {
+      ws2812fx.setSegment(5, segment[4] + 1, segment[5], FX_MODE_STATIC, nowColor, 1000, false);
+    }
+    if (String("e").equals(payload)) {
+      ws2812fx.setSegment(6, segment[5] + 1, segment[6], FX_MODE_STATIC, nowColor, 1000, false);
+    }
+    if (String("r").equals(payload)) {
+      ws2812fx.setSegment(7, segment[6] + 1, LED_COUNT - 1, FX_MODE_STATIC, nowColor, 1000, false);
+    }
+
+  }
+//---------------------------------------------------------------
+  if (String(setColorTopic).equals(topic)) {
+    nowColor =  handleColor(payload);
+  }
+}
+
+uint32_t handleColor(String c) {
+  String str_color = c.substring(2,4) + s.substring(0, 2) + s.substring(4, 6);
+  char *offset;
+  uint32_t colorhex = strtol(str_color.c_str(), &offset, 16);
+  return colorhex;
+}
