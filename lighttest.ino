@@ -11,9 +11,9 @@ const char* ssid = "SCU_Makers";  // wifi名称
 const char* password = "iloveSCU"; // wifi密码
 const char* mqtt_server = "scumaker.org";  // mqtt服务器地址，如本地ip192.168.31.22
 
-const byte ledPin = D4; // 需要控制的led灯
+const byte ledPin = 2; // 需要控制的led灯
 
-#define LED_COUNT 110
+#define LED_COUNT 353
 #define TIMER_MS 5000
 
 WiFiClient espClient;
@@ -53,23 +53,43 @@ void callback(char* topic, byte* payload, unsigned int length) {
         case 'S':
           Serial.println("enter switch");
           nowLeft = 0;
-          nowRight = 20;
+          nowRight = 55;
           idx = 0;
           break;
         case 'C':
-          nowLeft = 30;
-          nowRight = 50;
+          nowLeft = 56;
+          nowRight = 100;
           idx = 1;
           break;
         case 'U':
-          nowLeft = 60;
-          nowRight = 80;
+          nowLeft = 101;
+          nowRight = 162;
           idx = 2;
           break;
         case 'M':
-          nowLeft = 90;
-          nowRight = 110;
+          nowLeft = 163;
+          nowRight = 227;
           idx = 3;
+          break;
+        case 'A':
+          nowLeft = 228;
+          nowRight = 253;
+          idx = 4;
+          break;
+        case 'K':
+          nowLeft = 254;
+          nowRight = 289;
+          idx = 5;
+          break;
+        case 'E':
+          nowLeft = 290;
+          nowRight = 317;
+          idx = 6;
+          break;
+        case 'R':
+          nowLeft = 318;
+          nowRight = 352;
+          idx = 7;
           break;
       }
   }
